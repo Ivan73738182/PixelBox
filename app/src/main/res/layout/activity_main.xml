@@ -1,32 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:background="#0F0F1A">
-
-    <TextView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="PixelBox"
-        android:textColor="#FFFFFF"
-        android:textSize="22sp"
-        android:textStyle="bold"
-        android:padding="16dp"
-        android:gravity="center" />
+    android:background="#FFFFFF">
 
     <com.ivangames.pixelbox.PixelCanvasView
         android:id="@+id/pixelCanvas"
         android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
-        android:layout_margin="12dp" />
+        android:layout_height="match_parent" />
 
     <HorizontalScrollView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:layout_gravity="bottom"
         android:scrollbars="none"
-        android:paddingVertical="12dp">
+        android:paddingVertical="12dp"
+        android:background="#E60F0F1A">
 
         <LinearLayout
             android:id="@+id/paletteContainer"
@@ -38,4 +27,4 @@
 
     </HorizontalScrollView>
 
-</LinearLayout>
+</FrameLayout>

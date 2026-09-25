@@ -88,6 +88,11 @@ class PixelCanvasView @JvmOverloads constructor(
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
 
+        // Белый фон для всего поля
+canvas.drawColor(Color.WHITE)
+
+canvas.save()
+matrix.reset()
         canvas.save()
         matrix.reset()
         matrix.postScale(scaleFactor, scaleFactor, width / 2f, height / 2f)
