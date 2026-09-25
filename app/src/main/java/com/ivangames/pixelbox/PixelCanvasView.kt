@@ -49,6 +49,10 @@ class PixelCanvasView @JvmOverloads constructor(
     private var lastTouchY = 0f
     private var isDragging = false
 
+    // Размер сетки на экране (в пикселях)
+    private var boardSize = 0f
+    private var cellSize = 0f
+
     private val scaleDetector = ScaleGestureDetector(context, object : ScaleGestureDetector.SimpleOnScaleGestureListener() {
         override fun onScale(detector: ScaleGestureDetector): Boolean {
             scaleFactor *= detector.scaleFactor
@@ -76,55 +80,55 @@ class PixelCanvasView @JvmOverloads constructor(
 
     private fun fitToScreen() {
         if (width == 0 || height == 0) return
-        val size = minOf(width, height).toFloat()
-        val cellSize = size / gridSize
-        val totalSize = cellSize * gridSize
+        // Берём меньшую сторону экрана и делим на количество клеток
+        val size = minOf(width, height).toFloat() * 0.95f
+        boardSize = size
+        cellSize = size / gridSize
         scaleFactor = 1f
-        translateX = (width - totalSize) / 2f
-        translateY = (height - totalSize) / 2f
+        translateX = (width - boardSize) / 2f
+        translateY = (height - boardSize) / 2f
         invalidate()
     }
 
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
 
-        // Белый фон для всего поля
-canvas.drawColor(Color.WHITE)
+        // Белый фон всего экрана
+        canvas.drawColor(Color.WHITE)
 
-canvas.save()
-matrix.reset()
         canvas.save()
         matrix.reset()
-        matrix.postScale(scaleFactor, scaleFactor, width / 2f, height / 2f)
         matrix.postTranslate(translateX, translateY)
         canvas.concat(matrix)
 
-        val cellW = width.toFloat() / gridSize
-        val cellH = height.toFloat() / gridSize
-
+        // Рисуем пиксели (квадратные клетки)
         for (row in 0 until gridSize) {
             for (col in 0 until gridSize) {
                 cellPaint.color = pixels[row][col]
                 canvas.drawRect(
-                    col * cellW, row * cellH,
-                    (col + 1) * cellW, (row + 1) * cellH,
+                    col * cellSize,
+                    row * cellSize,
+                    (col + 1) * cellSize,
+                    (row + 1) * cellSize,
                     cellPaint
                 )
             }
         }
 
+        // Сетка
         for (i in 0..gridSize) {
-            canvas.drawLine(i * cellW, 0f, i * cellW, height.toFloat(), gridPaint)
-            canvas.drawLine(0f, i * cellH, width.toFloat(), i * cellH, gridPaint)
+            canvas.drawLine(i * cellSize, 0f, i * cellSize, boardSize, gridPaint)
+            canvas.drawLine(0f, i * cellSize, boardSize, i * cellSize, gridPaint)
         }
 
-        numberPaint.textSize = cellH * 0.5f
+        // Цифры
+        numberPaint.textSize = cellSize * 0.5f
         for (row in 0 until gridSize) {
             for (col in 0 until gridSize) {
                 val number = template[row][col]
                 if (number > 0 && pixels[row][col] == Color.WHITE) {
-                    val cx = col * cellW + cellW / 2
-                    val cy = row * cellH + cellH / 2 - (numberPaint.descent() + numberPaint.ascent()) / 2
+                    val cx = col * cellSize + cellSize / 2
+                    val cy = row * cellSize + cellSize / 2 - (numberPaint.descent() + numberPaint.ascent()) / 2
                     canvas.drawText(number.toString(), cx, cy, numberPaint)
                 }
             }
@@ -165,15 +169,12 @@ matrix.reset()
     }
 
     private fun handleTap(x: Float, y: Float) {
-        val inv = Matrix()
-        matrix.invert(inv)
-        val pts = floatArrayOf(x, y)
-        inv.mapPoints(pts)
+        // Перевод координат экрана в координаты сетки
+        val gridX = x - translateX
+        val gridY = y - translateY
 
-        val cellW = width.toFloat() / gridSize
-        val cellH = height.toFloat() / gridSize
-        val col = (pts[0] / cellW).toInt()
-        val row = (pts[1] / cellH).toInt()
+        val col = (gridX / cellSize).toInt()
+        val row = (gridY / cellSize).toInt()
 
         if (row in 0 until gridSize && col in 0 until gridSize) {
             val expected = template[row][col]
