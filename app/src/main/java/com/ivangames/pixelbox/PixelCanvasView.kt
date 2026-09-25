@@ -41,7 +41,6 @@ class PixelCanvasView @JvmOverloads constructor(
         isAntiAlias = true
     }
 
-    // Зум и панорама
     private val matrix = Matrix()
     private var scaleFactor = 1f
     private var translateX = 0f
@@ -71,6 +70,18 @@ class PixelCanvasView @JvmOverloads constructor(
         scaleFactor = 1f
         translateX = 0f
         translateY = 0f
+        post { fitToScreen() }
+        invalidate()
+    }
+
+    private fun fitToScreen() {
+        if (width == 0 || height == 0) return
+        val size = minOf(width, height).toFloat()
+        val cellSize = size / gridSize
+        val totalSize = cellSize * gridSize
+        scaleFactor = 1f
+        translateX = (width - totalSize) / 2f
+        translateY = (height - totalSize) / 2f
         invalidate()
     }
 
@@ -86,7 +97,6 @@ class PixelCanvasView @JvmOverloads constructor(
         val cellW = width.toFloat() / gridSize
         val cellH = height.toFloat() / gridSize
 
-        // Пиксели
         for (row in 0 until gridSize) {
             for (col in 0 until gridSize) {
                 cellPaint.color = pixels[row][col]
@@ -98,13 +108,11 @@ class PixelCanvasView @JvmOverloads constructor(
             }
         }
 
-        // Сетка
         for (i in 0..gridSize) {
             canvas.drawLine(i * cellW, 0f, i * cellW, height.toFloat(), gridPaint)
             canvas.drawLine(0f, i * cellH, width.toFloat(), i * cellH, gridPaint)
         }
 
-        // Цифры
         numberPaint.textSize = cellH * 0.5f
         for (row in 0 until gridSize) {
             for (col in 0 until gridSize) {
@@ -133,19 +141,16 @@ class PixelCanvasView @JvmOverloads constructor(
                 if (event.pointerCount == 1 && !scaleDetector.isInProgress) {
                     val dx = event.x - lastTouchX
                     val dy = event.y - lastTouchY
-                    if (Math.abs(dx) > 5 || Math.abs(dy) > 5) {
-                        isDragging = true
-                        translateX += dx
-                        translateY += dy
-                        invalidate()
-                    }
+                    isDragging = true
+                    translateX += dx
+                    translateY += dy
                     lastTouchX = event.x
                     lastTouchY = event.y
+                    invalidate()
                 }
             }
             MotionEvent.ACTION_UP -> {
                 if (!isDragging && !scaleDetector.isInProgress) {
-                    // Тап — красим
                     handleTap(event.x, event.y)
                 }
                 isDragging = false
@@ -155,7 +160,6 @@ class PixelCanvasView @JvmOverloads constructor(
     }
 
     private fun handleTap(x: Float, y: Float) {
-        // Переводим координаты экрана в координаты сетки с учётом зума и панорамы
         val inv = Matrix()
         matrix.invert(inv)
         val pts = floatArrayOf(x, y)
