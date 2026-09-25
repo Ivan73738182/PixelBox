@@ -40,7 +40,7 @@ class MainActivity : AppCompatActivity() {
         val marginPx = (6 * resources.displayMetrics.density).toInt()
 
         colors.forEach { color ->
-            val view = View(this).apply {
+            val colorView = View(this).apply {
                 layoutParams = LinearLayout.LayoutParams(sizePx, sizePx).apply {
                     marginStart = marginPx
                     marginEnd = marginPx
@@ -50,16 +50,16 @@ class MainActivity : AppCompatActivity() {
                     setColor(color)
                     setStroke(4, Color.parseColor("#333344"))
                 }
-                setOnClickListener {
-                    pixelCanvas.currentColor = color
-                    highlightSelected(view, color)
-                }
             }
-            paletteContainer.addView(view)
+            colorView.setOnClickListener {
+                pixelCanvas.currentColor = color
+                highlightSelected(colorView)
+            }
+            paletteContainer.addView(colorView)
         }
     }
 
-    private fun highlightSelected(selected: View, color: Int) {
+    private fun highlightSelected(selected: View) {
         for (i in 0 until paletteContainer.childCount) {
             val child = paletteContainer.getChildAt(i)
             (child.background as? GradientDrawable)?.setStroke(4, Color.parseColor("#333344"))
