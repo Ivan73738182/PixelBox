@@ -1,78 +1,94 @@
 package com.ivangames.pixelbox
 
 import android.content.Context
-import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.Color
+import android.util.Log
 import kotlin.math.abs
 
 object ImageLoader {
 
-    // Результат загрузки
+    private const val TAG = "ImageLoader"
+
     class LoadedTemplate(
-        val grid: Array<IntArray>,       // номер цвета в каждой клетке (0 = не красить)
-        val colors: List<Int>            // палитра: colors[0] = цвет №1, colors[1] = цвет №2, и т.д.
+        val grid: Array<IntArray>,
+        val colors: List<Int>
     )
 
-    // Основная функция: читает PNG, квантует цвета, строит шаблон
     fun loadTemplate(context: Context, assetPath: String, maxColors: Int = 12): LoadedTemplate {
-        val bitmap = context.assets.open(assetPath).use { BitmapFactory.decodeStream(it) }
-        val width = bitmap.width
-        val height = bitmap.height
+        Log.d(TAG, "=== Старт загрузки: $assetPath ===")
+        try {
+            val inputStream = context.assets.open(assetPath)
+            Log.d(TAG, "Файл открыт")
+            val bitmap = BitmapFactory.decodeStream(inputStream)
+            inputStream.close()
 
-        // Считаем все пиксели
-        val rawPixels = Array(height) { IntArray(width) }
-        for (y in 0 until height) {
-            for (x in 0 until width) {
-                val argb = bitmap.getPixel(x, y)
-                rawPixels[y][x] = argb
+            if (bitmap == null) {
+                Log.e(TAG, "Bitmap == null")
+                return fallback()
             }
-        }
 
-        // Собираем уникальные цвета (без прозрачных)
-        val uniqueColors = mutableSetOf<Int>()
-        for (y in 0 until height) {
-            for (x in 0 until width) {
-                val c = rawPixels[y][x]
-                val alpha = (c ushr 24) and 0xFF
-                if (alpha > 128) { // игнорируем сильно прозрачные
-                    uniqueColors.add(c)
+            Log.d(TAG, "Bitmap: ${bitmap.width}×${bitmap.height}")
+
+            val width = bitmap.width
+            val height = bitmap.height
+
+            val rawPixels = Array(height) { IntArray(width) }
+            for (y in 0 until height) {
+                for (x in 0 until width) {
+                    rawPixels[y][x] = bitmap.getPixel(x, y)
                 }
             }
-        }
+            Log.d(TAG, "Пиксели считаны")
 
-        // Квантуем: сводим к maxColors основным
-        val palette = quantize(uniqueColors.toList(), maxColors)
-
-        // Строим сетку с номерами (1..N), 0 = прозрачный / не красить
-        val grid = Array(height) { IntArray(width) { 0 } }
-        for (y in 0 until height) {
-            for (x in 0 until width) {
-                val c = rawPixels[y][x]
-                val alpha = (c ushr 24) and 0xFF
-                if (alpha > 128) {
-                    val index = findClosestColorIndex(c, palette)
-                    grid[y][x] = index + 1 // номер цвета (1-based)
-                } else {
-                    grid[y][x] = 0 // прозрачный — не красить
+            val uniqueColors = mutableSetOf<Int>()
+            for (y in 0 until height) {
+                for (x in 0 until width) {
+                    val c = rawPixels[y][x]
+                    val alpha = (c ushr 24) and 0xFF
+                    if (alpha > 128) uniqueColors.add(c)
                 }
             }
-        }
+            Log.d(TAG, "Уникальных цветов: ${uniqueColors.size}")
 
-        return LoadedTemplate(grid, palette)
+            val palette = quantize(uniqueColors.toList(), maxColors)
+            Log.d(TAG, "После квантования: ${palette.size}")
+
+            val grid = Array(height) { IntArray(width) { 0 } }
+            for (y in 0 until height) {
+                for (x in 0 until width) {
+                    val c = rawPixels[y][x]
+                    val alpha = (c ushr 24) and 0xFF
+                    if (alpha > 128) {
+                        grid[y][x] = findClosestColorIndex(c, palette) + 1
+                    }
+                }
+            }
+            Log.d(TAG, "=== Готово: ${grid.size}×${grid[0].size}, цветов ${palette.size} ===")
+
+            return LoadedTemplate(grid, palette)
+        } catch (e: Exception) {
+            Log.e(TAG, "ОШИБКА: ${e.message}", e)
+            return fallback()
+        }
     }
 
-    // Квантование: свести много цветов к N основным
+    private fun fallback(): LoadedTemplate {
+        Log.d(TAG, "Использую fallback (16×16 красный)")
+        val grid = Array(16) { IntArray(16) { 1 } }
+        return LoadedTemplate(grid, listOf(Color.RED))
+    }
+
     private fun quantize(colors: List<Int>, maxColors: Int): List<Int> {
         if (colors.size <= maxColors) return colors
 
-        // Простой алгоритм: усредняем похожие цвета
         val result = mutableListOf<Int>()
         val used = mutableListOf<Int>()
 
-        for (color in colors.shuffled()) {
+        for (color in colors.sortedByDescending { Color.red(it) + Color.green(it) + Color.blue(it) }) {
             var merged = false
-            for (i in used.indices) {
-                if (colorDistance(color, used[i]) < 3000) { // похожие
+            for (u in used) {
+                if (colorDistance(color, u) < 3000) {
                     merged = true
                     break
                 }
@@ -83,12 +99,9 @@ object ImageLoader {
                 if (result.size >= maxColors) break
             }
         }
-
-        // Если получилось меньше maxColors — ничего страшного, добиваем
         return result
     }
 
-    // Найти индекс ближайшего цвета в палитре
     private fun findClosestColorIndex(color: Int, palette: List<Int>): Int {
         var bestIndex = 0
         var bestDist = Int.MAX_VALUE
@@ -102,7 +115,6 @@ object ImageLoader {
         return bestIndex
     }
 
-    // Расстояние между двумя цветами (простая метрика)
     private fun colorDistance(c1: Int, c2: Int): Int {
         val r1 = (c1 shr 16) and 0xFF
         val g1 = (c1 shr 8) and 0xFF
