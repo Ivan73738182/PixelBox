@@ -22,6 +22,7 @@ class PixelCanvasView @JvmOverloads constructor(
         }
 
     var currentColor: Int = Color.RED
+    var currentColorNumber: Int = 1
 
     // template[row][col]: 0 = пусто (не красить), 1..N = цвет по номеру
     private var template: Array<IntArray> = Array(gridSize) { IntArray(gridSize) { 0 } }
@@ -139,20 +140,19 @@ class PixelCanvasView @JvmOverloads constructor(
         return true
     }
 
-    private fun handleTouch(x: Float, y: Float) {
-        val col = ((x - boardLeft) / cellSize).toInt()
-        val row = ((y - boardTop) / cellSize).toInt()
+private fun handleTouch(x: Float, y: Float) {
+    val col = ((x - boardLeft) / cellSize).toInt()
+    val row = ((y - boardTop) / cellSize).toInt()
 
-        if (row in 0 until gridSize && col in 0 until gridSize) {
-            val expected = template[row][col]
-            // Красим только те клетки, которые предназначены для раскраски
-            if (expected > 0) {
-                // Если цвет не меняется — не перерисовываем
-                if (pixels[row][col] != currentColor) {
-                    pixels[row][col] = currentColor
-                    invalidate()
-                }
+    if (row in 0 until gridSize && col in 0 until gridSize) {
+        val expected = template[row][col]
+        // Красим только те клетки, где цифра совпадает с выбранным цветом
+        if (expected > 0 && expected == currentColorNumber) {
+            if (pixels[row][col] != currentColor) {
+                pixels[row][col] = currentColor
+                invalidate()
             }
         }
     }
+}
 }

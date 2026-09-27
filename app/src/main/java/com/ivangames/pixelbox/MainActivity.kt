@@ -83,6 +83,7 @@ buildPalette()
 
 frame.setOnClickListener {
     pixelCanvas.currentColor = color
+    pixelCanvas.currentColorNumber = index + 1
     highlightSelected(frame)
 }
             paletteContainer.addView(frame)

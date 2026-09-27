@@ -13,13 +13,13 @@ class MenuActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_menu)
 
-        val templates = listOf(
-            Template("Сердечко", "heart"),
-            Template("Смайлик", "smile"),
-            Template("Котик", "cat"),
-            Template("Домик", "house")
-        )
-
+val templates = listOf(
+    Template("Сердечко", "heart"),
+    Template("Яблоко", "apple"),
+    Template("Груша", "pear"),
+    Template("Банан", "banana"),
+    Template("Вишня", "cherry")
+)
         val recycler = findViewById<RecyclerView>(R.id.templatesList)
         recycler.layoutManager = GridLayoutManager(this, 2)
         recycler.adapter = TemplateAdapter(templates) { template ->
