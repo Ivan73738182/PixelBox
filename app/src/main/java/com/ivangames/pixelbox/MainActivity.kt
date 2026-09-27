@@ -8,12 +8,14 @@ import android.view.View
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 
 class MainActivity : AppCompatActivity() {
 
     private lateinit var pixelCanvas: PixelCanvasView
     private lateinit var paletteContainer: LinearLayout
+    private lateinit var errorText: TextView
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -21,21 +23,33 @@ class MainActivity : AppCompatActivity() {
 
         pixelCanvas = findViewById(R.id.pixelCanvas)
         paletteContainer = findViewById(R.id.paletteContainer)
+        errorText = findViewById(R.id.errorText)
 
         val templatePath = intent.getStringExtra("template") ?: "templates/sunset.png"
 
-        // Загружаем картинку и её палитру
-        val loaded = ImageLoader.loadTemplate(this, templatePath, maxColors = 12)
+        try {
+            // Загружаем картинку
+            val loaded = ImageLoader.loadTemplate(this, templatePath, maxColors = 12)
 
-        // Передаём шаблон в Canvas
-        pixelCanvas.loadTemplate(loaded.grid)
+            // Показываем отладку
+            errorText.text = "Загружено: ${loaded.grid.size}×${loaded.grid[0].size}\nЦветов: ${loaded.colors.size}"
+            errorText.visibility = View.VISIBLE
 
-        // Строим палитру ИЗ ЦВЕТОВ ЭТОЙ КАРТИНКИ
-        buildPalette(loaded.colors)
+            // Передаём шаблон
+            pixelCanvas.loadTemplate(loaded.grid)
+
+            // Палитра
+            buildPalette(loaded.colors)
+        } catch (e: Exception) {
+            // Если упало — показываем ошибку
+            errorText.text = "ОШИБКА:\n${e.message}\n\n${e.stackTraceToString().take(500)}"
+            errorText.visibility = View.VISIBLE
+            Toast.makeText(this, "Ошибка: ${e.message}", Toast.LENGTH_LONG).show()
+        }
     }
 
     private fun buildPalette(colors: List<Int>) {
-        val sizePx = (52 * resources.displayMetrics.density).toInt()
+        val sizePx = (48 * resources.displayMetrics.density).toInt()
         val marginPx = (6 * resources.displayMetrics.density).toInt()
 
         colors.forEachIndexed { index, color ->
@@ -46,7 +60,6 @@ class MainActivity : AppCompatActivity() {
                 }
             }
 
-            // Кружок с цветом
             val colorView = View(this).apply {
                 layoutParams = FrameLayout.LayoutParams(sizePx, sizePx)
                 background = GradientDrawable().apply {
@@ -57,11 +70,10 @@ class MainActivity : AppCompatActivity() {
             }
             frame.addView(colorView)
 
-            // Номер поверх кружка
             val numberText = TextView(this).apply {
                 text = (index + 1).toString()
                 setTextColor(if (isLightColor(color)) Color.BLACK else Color.WHITE)
-                textSize = 16f
+                textSize = 14f
                 gravity = Gravity.CENTER
                 layoutParams = FrameLayout.LayoutParams(sizePx, sizePx)
             }
