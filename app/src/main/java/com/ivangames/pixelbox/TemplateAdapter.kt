@@ -1,9 +1,10 @@
 package com.ivangames.pixelbox
 
-import android.graphics.Color
+import android.graphics.BitmapFactory
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.ImageView
 import android.widget.TextView
 import androidx.cardview.widget.CardView
 import androidx.recyclerview.widget.RecyclerView
@@ -15,6 +16,7 @@ class TemplateAdapter(
 
     class TemplateViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         val card: CardView = view.findViewById(R.id.templateCard)
+        val image: ImageView = view.findViewById(R.id.templateImage)
         val title: TextView = view.findViewById(R.id.templateTitle)
     }
 
@@ -27,6 +29,17 @@ class TemplateAdapter(
     override fun onBindViewHolder(holder: TemplateViewHolder, position: Int) {
         val template = templates[position]
         holder.title.text = template.name
+
+        // Грузим превью из assets
+        try {
+            val inputStream = holder.itemView.context.assets.open(template.assetPath)
+            val bitmap = BitmapFactory.decodeStream(inputStream)
+            holder.image.setImageBitmap(bitmap)
+            inputStream.close()
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+
         holder.card.setOnClickListener { onClick(template) }
     }
 

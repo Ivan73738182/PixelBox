@@ -15,40 +15,26 @@ class MainActivity : AppCompatActivity() {
     private lateinit var pixelCanvas: PixelCanvasView
     private lateinit var paletteContainer: LinearLayout
 
-    private val colors = listOf(
-        0xFFFF0000.toInt(), // 1 - красный
-        0xFFFF9800.toInt(), // 2 - оранжевый
-        0xFFFFEB3B.toInt(), // 3 - жёлтый
-        0xFF4CAF50.toInt(), // 4 - зелёный
-        0xFF00BCD4.toInt(), // 5 - голубой
-        0xFF2196F3.toInt(), // 6 - синий
-        0xFF9C27B0.toInt(), // 7 - фиолетовый
-        0xFFFF69B4.toInt(), // 8 - розовый
-        0xFF795548.toInt(), // 9 - коричневый
-        0xFF000000.toInt(), // 10 - чёрный
-        0xFF9E9E9E.toInt(), // 11 - серый
-        0xFFFFFFFF.toInt(), // 12 - белый
-        0xFF00FF00.toInt(), // 13 - лайм
-        0xFF00FFFF.toInt(), // 14 - циан
-        0xFFFF00FF.toInt(), // 15 - маджента
-        0xFF8B0000.toInt()  // 16 - тёмно-красный
-    )
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-pixelCanvas = findViewById(R.id.pixelCanvas)
-paletteContainer = findViewById(R.id.paletteContainer)
+        pixelCanvas = findViewById(R.id.pixelCanvas)
+        paletteContainer = findViewById(R.id.paletteContainer)
 
-val templateId = intent.getStringExtra("template") ?: "heart"
-val template = TemplateData.getTemplate(templateId)
-pixelCanvas.loadTemplate(template)
+        val templatePath = intent.getStringExtra("template") ?: "templates/sunset.png"
 
-buildPalette()
+        // Загружаем картинку и её палитру
+        val loaded = ImageLoader.loadTemplate(this, templatePath, maxColors = 12)
+
+        // Передаём шаблон в Canvas
+        pixelCanvas.loadTemplate(loaded.grid)
+
+        // Строим палитру ИЗ ЦВЕТОВ ЭТОЙ КАРТИНКИ
+        buildPalette(loaded.colors)
     }
 
-    private fun buildPalette() {
+    private fun buildPalette(colors: List<Int>) {
         val sizePx = (52 * resources.displayMetrics.density).toInt()
         val marginPx = (6 * resources.displayMetrics.density).toInt()
 
@@ -71,21 +57,21 @@ buildPalette()
             }
             frame.addView(colorView)
 
-            // Цифра поверх кружка
+            // Номер поверх кружка
             val numberText = TextView(this).apply {
                 text = (index + 1).toString()
-                setTextColor(if (color == 0xFFFFFFFF.toInt() || color == 0xFFFFEB3B.toInt()) Color.BLACK else Color.WHITE)
+                setTextColor(if (isLightColor(color)) Color.BLACK else Color.WHITE)
                 textSize = 16f
                 gravity = Gravity.CENTER
                 layoutParams = FrameLayout.LayoutParams(sizePx, sizePx)
             }
             frame.addView(numberText)
 
-frame.setOnClickListener {
-    pixelCanvas.currentColor = color
-    pixelCanvas.currentColorNumber = index + 1
-    highlightSelected(frame)
-}
+            frame.setOnClickListener {
+                pixelCanvas.currentColor = color
+                pixelCanvas.currentColorNumber = index + 1
+                highlightSelected(frame)
+            }
             paletteContainer.addView(frame)
         }
     }
@@ -98,5 +84,13 @@ frame.setOnClickListener {
         }
         val selectedColorView = selected.getChildAt(0) as View
         (selectedColorView.background as? GradientDrawable)?.setStroke(8, Color.WHITE)
+    }
+
+    private fun isLightColor(color: Int): Boolean {
+        val r = (color shr 16) and 0xFF
+        val g = (color shr 8) and 0xFF
+        val b = color and 0xFF
+        val brightness = (r * 299 + g * 587 + b * 114) / 1000
+        return brightness > 150
     }
 }
